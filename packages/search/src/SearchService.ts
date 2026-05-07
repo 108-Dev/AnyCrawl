@@ -206,7 +206,7 @@ export class SearchService {
     async search(
         engineName: string | undefined,
         options: SearchOptions,
-        onPage?: (page: number, results: SearchResult[], uniqueKey: string, success: boolean) => void,
+        onPage?: (page: number, results: SearchResult[], uniqueKey: string, success: boolean) => void | Promise<void>,
     ): Promise<SearchResult[]> {
         log.info("Search called with options:", options);
 
@@ -282,7 +282,7 @@ export class SearchService {
                 pageResults.sort((a, b) => a.pageNum - b.pageNum);
                 for (const { pageNum, results, success } of pageResults) {
                     if (onPage) {
-                        onPage(pageNum, results, actualEngineName, success);
+                        await onPage(pageNum, results, actualEngineName, success);
                     }
                     allResults.push(...results);
                 }
@@ -293,7 +293,7 @@ export class SearchService {
                     const { results, success } = await fetchPage(pageNum);
 
                     if (onPage) {
-                        onPage(pageNum, results, actualEngineName, success);
+                        await onPage(pageNum, results, actualEngineName, success);
                     }
                     allResults.push(...results);
                 }
