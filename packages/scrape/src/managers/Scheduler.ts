@@ -1177,11 +1177,24 @@ export class SchedulerManager {
                 // @ts-ignore - Dynamic import to avoid circular dependency
                 const { SearchService, getSearchConfig } = await import("@anycrawl/search");
                 const searchService = new SearchService(getSearchConfig());
-
-                const results = await searchService.search(payload.engine, {
+                const resolvedSearchEngine = searchService.resolveEngine(payload.engine);
+                const effectivePages = searchService.resolveEffectivePages(resolvedSearchEngine, {
                     query: payload.query,
                     limit: payload.limit,
                     offset: payload.offset,
+                    pages: payload.pages,
+                    lang: payload.lang,
+                    country: payload.country,
+                    timeRange: payload.timeRange,
+                    sources: payload.sources,
+                    safe_search: payload.safe_search,
+                });
+
+                const results = await searchService.search(resolvedSearchEngine, {
+                    query: payload.query,
+                    limit: payload.limit,
+                    offset: payload.offset,
+                    pages: effectivePages,
                     lang: payload.lang,
                     country: payload.country,
                     timeRange: payload.timeRange,
@@ -1192,7 +1205,7 @@ export class SchedulerManager {
                 resultData = results;
                 chargeDetails = CreditCalculator.buildSearchChargeDetails(
                     {
-                        pages: payload.pages,
+                        pages: effectivePages,
                     },
                     {
                         templateCredits: templatePerCallCredits,

@@ -201,6 +201,11 @@ if (config.webhooks.enabled) {
 }
 
 async function runJob(job: Job) {
+    if (job.data.status === "cancelled") {
+        log.warning(`[WORKER] Skipping cancelled job before dispatch: jobId=${job.id} queue=${job.data.queueName}`);
+        return;
+    }
+
     // Resolve "auto" to the actual engine from _autoResolvedEngine or queue name
     let engineType = job.data.engine || "cheerio";
     if (engineType === "auto") {
@@ -239,6 +244,9 @@ async function runJob(job: Job) {
     // Use queue job ID for status updates, but pass parentId for result recording
     const currentJobId = job.id as string;
     const parentId = job.data.parentId || currentJobId; // Use provided parentId for result recording
+    log.info(
+        `[WORKER] Dispatching ${jobType} job to ${engineType} request queue: jobId=${currentJobId} parentId=${parentId} bullQueue=${job.data.queueName}`
+    );
     const uniqueKey = await engineQueueManager.addRequest(engineType, job.data.url, {
         jobId: currentJobId, // Use queue job ID for status updates
         parentId: parentId, // Use parent job ID for result recording
@@ -261,15 +269,21 @@ async function runJob(job: Job) {
     if (jobType === JOB_TYPE_CRAWL) {
         await ProgressManager.getInstance().incrementEnqueued(currentJobId, 1);
     }
-    job.updateData({
+    const latestJobState = await QueueManager.getInstance().getJobStatus(job.data.queueName, currentJobId);
+    if (latestJobState?.task_status === "cancelled") {
+        log.warning(`[WORKER] Job ${currentJobId} was cancelled after request enqueue; preserving cancelled state`);
+        return;
+    }
+    await job.updateData({
         ...job.data,
         uniqueKey,
         status: "processing",
     });
+    log.info(`[WORKER] Dispatched job ${currentJobId} to ${engineType} request queue with uniqueKey=${uniqueKey}`);
 }
 
 // Initialize the application
-(async () => {
+const startWorker = async () => {
     try {
         // check redis
         const redisClient = Utils.getInstance().getRedisConnection();
@@ -306,12 +320,17 @@ async function runJob(job: Job) {
                                 `[WORKER]   Scheduled Task: ${job.data.scheduled_task_id || "N/A"}`
                             );
 
+                            if (job.data.status === "cancelled") {
+                                log.warning(`[WORKER] Scrape job ${job.id} was cancelled before processing; skipping dispatch`);
+                                return;
+                            }
+
                             // Mark execution as started when job actually begins processing
                             if (job.data.scheduled_execution_id) {
                                 await markExecutionStarted(job.data.scheduled_execution_id);
                             }
 
-                            job.updateData({
+                            await job.updateData({
                                 ...job.data,
                                 type: JOB_TYPE_SCRAPE,
                             });
@@ -352,12 +371,17 @@ async function runJob(job: Job) {
                     const worker = await WorkerManager.getInstance().getWorker(
                         `crawl-${engineType}`,
                         async (job: Job) => {
+                            if (job.data.status === "cancelled") {
+                                log.warning(`[WORKER] Crawl job ${job.id} was cancelled before processing; skipping dispatch`);
+                                return;
+                            }
+
                             // Mark execution as started when job actually begins processing
                             if (job.data.scheduled_execution_id) {
                                 await markExecutionStarted(job.data.scheduled_execution_id);
                             }
 
-                            job.updateData({
+                            await job.updateData({
                                 ...job.data,
                                 type: JOB_TYPE_CRAWL,
                             });
@@ -664,7 +688,9 @@ async function runJob(job: Job) {
         log.error(`Failed to start scraping worker: ${error}`);
         process.exit(1);
     }
-})();
+};
+
+await startWorker();
 // Start engines (only if not scheduler-only)
 if (!schedulerOnly) {
     await engineQueueManager.startEngines();
