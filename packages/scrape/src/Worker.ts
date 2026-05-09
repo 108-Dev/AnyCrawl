@@ -20,6 +20,7 @@ import {
 } from "@anycrawl/ai/utils/helper.js";
 import { getDB, schemas, eq } from "@anycrawl/db";
 import { finalizeExecution } from "./managers/ExecutionLifecycle.js";
+import { formatPerformanceTuningSummary } from "./core/PerformanceTuner.js";
 
 // Helper function to update execution status
 // Note: Metrics (credits_used, items_processed, etc.) are stored in jobs table
@@ -142,6 +143,7 @@ try {
 } catch {}
 log.info(`🔐 Auth enabled: ${appConfig.authEnabled}`);
 log.info(`💳 Credits deduction enabled: ${appConfig.creditsEnabled}`);
+log.info(`[performance] ${formatPerformanceTuningSummary()}`);
 
 // Determine which engines to initialize based on requested queues
 let AVAILABLE_ENGINES: string[] = [];

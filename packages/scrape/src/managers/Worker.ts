@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { log } from "@anycrawl/libs";
 import { Utils } from "../Utils.js";
+import { getPerformanceTuning } from "../core/PerformanceTuner.js";
 
 export class WorkerManager {
     private static instance: WorkerManager;
@@ -29,7 +30,7 @@ export class WorkerManager {
                     },
                     {
                         connection: Utils.getInstance().getRedisConnection(),
-                        concurrency: 50,
+                        concurrency: getPerformanceTuning().workerConcurrency,
                     }
                 )
             );
