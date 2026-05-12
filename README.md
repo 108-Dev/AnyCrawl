@@ -209,6 +209,14 @@ curl -X POST https://api.anycrawl.dev/v1/search \
 
 We welcome contributions! See the [Contributing Guide](CONTRIBUTING.md).
 
+
+## Backers
+Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/anycrawl)]
+
+<a href="https://opencollective.com">
+  <img src="https://opencollective.com/backers.svg?width=890">
+</a>
+
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE).
