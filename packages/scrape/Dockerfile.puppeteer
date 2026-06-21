@@ -1,4 +1,4 @@
-FROM apify/actor-node-puppeteer-chrome AS base
+FROM apify/actor-node-puppeteer-chrome:22 AS base
 
 LABEL org.opencontainers.image.source=https://github.com/any4ai/AnyCrawl
 LABEL org.opencontainers.image.description="AnyCrawl Scrape Puppeteer Worker"

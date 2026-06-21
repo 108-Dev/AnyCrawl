@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 LABEL org.opencontainers.image.source=https://github.com/any4ai/AnyCrawl
 LABEL org.opencontainers.image.description="AnyCrawl Scrape Cheerio Worker"
